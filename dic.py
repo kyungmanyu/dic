@@ -50,11 +50,11 @@ f1_valid = []
 #     f1_valid.append(f1)
 
 
-xticks = list(map(str, max_depths))
-print(xticks)
+# xticks = list(map(str, max_depths))
+# print(xticks)
 
-tree = DecisionTreeRegressor().fit(X_train, y_train)
-tree_prediction = tree.predict(X_test)
+# tree = DecisionTreeRegressor().fit(X_train, y_train)
+# tree_prediction = tree.predict(X_test)
 
 # plt.xlabel("X-axis")
 # plt.ylabel("Y-axis")
@@ -67,47 +67,67 @@ tree_prediction = tree.predict(X_test)
 # print(tree_prediction)
 
 
+
+# --------random forest---------------
+
 from sklearn.model_selection import train_test_split, GridSearchCV
 
-param_grid = {'n_estimators': [100, 200],
-              'oob_score': [True], # compute out of bag error
-              'n_jobs':[-1], 
-              'max_depth': [3, 5]
-              }
+# param_grid = {'n_estimators': [100, 200],
+#               'oob_score': [True], # compute out of bag error
+#               'n_jobs':[-1], 
+#               'max_depth': [3, 5]
+#               }
 
 
-# rf_model = RandomForestClassifier()
-rf_model = RandomForestRegressor()
+# # rf_model = RandomForestClassifier()
+# rf_model = RandomForestRegressor()
 
-# hyperparameter search
-grid_search = GridSearchCV(rf_model, param_grid=param_grid, cv=5, scoring='f1')
-grid_search.fit( X_train, y_train)
+# # hyperparameter search
+# grid_search = GridSearchCV(rf_model, param_grid=param_grid, cv=5, scoring='f1')
+# grid_search.fit( X_train, y_train)
 
-grid_search.best_params_
+# grid_search.best_params_
 
+# opt_model = grid_search.best_estimator_
+# opt_model
+
+
+# test_pred_y = opt_model.predict(X_test)
+# test_pred_y
+
+
+
+
+
+import xgboost as xgb
+# Parameter Tuning
+model = xgb.XGBRegressor()
+param_dist = {"max_depth": [10,30,50],
+              "min_child_weight" : [1,3,6],
+              "n_estimators": [200],
+              "learning_rate": [0.05, 0.1,0.16]}
+
+grid_search = GridSearchCV(model, param_grid=param_dist, cv = 3,scoring="accuracy", 
+                                   verbose=10, n_jobs=-1)
+grid_search.fit(X_train, y_train)
 opt_model = grid_search.best_estimator_
-opt_model
-
-
 test_pred_y = opt_model.predict(X_test)
-test_pred_y
-
 
 
 x = []
 for i in range(len(test_pred_y)):
     x.append(i)
-mae = np.mean(np.abs(test_pred_y-y_test))
-print(mae)
+# mae = np.mean(np.abs(test_pred_y-y_test))
+# print(mae)
 
 # plt.plot(y_test,color='r')
 
 plt.xlabel("X-axis")
 plt.ylabel("Y-axis")
-plt.title("suction predict randomforest")
+plt.title("suction predict xgboost")
 # plt.plot(test_pred_y,y_test,color=['r','b'])
 plt.plot(x,test_pred_y,color='red')
 plt.plot(x,y_test,color='green')
+plt.legend()
 
 plt.show()
-
