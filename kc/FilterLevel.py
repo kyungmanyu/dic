@@ -54,7 +54,7 @@ trainning = {'Classifier':0, 'Regressor':1}
 class AI_Filter_Level():
     train_x = 0
     train_y = 0
-    best_acc = 0
+    acc_list = []
     def File_read(self, type):
         if type == 'train':
             filename = train_file
@@ -155,10 +155,10 @@ class AI_Filter_Level():
         if type == 'Classifier':
             acc_score_test =accuracy_score(y_true=self.test_y, y_pred=test_pred_y)
             print('acc_score_test',acc_score_test)
+            self.acc_list.append(acc_score_test)
             acc_score_train =accuracy_score(y_true=self.train_y, y_pred=train_pred_y)            
             print('acc_score_train',acc_score_train)   
-            if(self.best_acc < acc_score_test):
-                self.best_acc = acc_score_test      
+            
                
         elif type == 'Regressor':
             mae = np.mean(np.abs(test_pred_y-self.test_y))
@@ -244,7 +244,9 @@ class AI_Filter_Level():
             self.Trainning_ensenmble('rf', trainning_type)   
             self.Testing('ensemble', trainning_type, False)  
             
-        print('best acc by using leave one out', self.best_acc)
+        print('best acc by using leave one out', max(self.acc_list))
+        print('worst acc by using leave one out', min(self.acc_list))
+        print('mean acc by using leave one out', sum(self.acc_list)/len(self.acc_list))
  
         
         
