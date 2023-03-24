@@ -52,6 +52,9 @@ Ensenmble_param = {'rf':[param_rf, param_rf], \
 trainning = {'Classifier':0, 'Regressor':1}   
 
 class AI_Filter_Level():
+    train_x = 0
+    train_y = 0
+    best_acc = 0
     def File_read(self, type):
         if type == 'train':
             filename = train_file
@@ -99,7 +102,9 @@ class AI_Filter_Level():
         else:self.grid_search = GridSearchCV(model_ensen, param_grid=parm, cv=25, scoring = 'accuracy')
         
         self.grid_search.fit(self.train_x, self.train_y)        
-        self.opt_model = self.grid_search.best_estimator_    
+        self.opt_model = self.grid_search.best_estimator_   
+        
+        # self.opt_model.fit(self.train_x, self.train_y)
         print(self.opt_model)
         
     def Trainning_MLP(self, player = (4,4,2), type = 'Classifier'):   
@@ -151,7 +156,9 @@ class AI_Filter_Level():
             acc_score_test =accuracy_score(y_true=self.test_y, y_pred=test_pred_y)
             print('acc_score_test',acc_score_test)
             acc_score_train =accuracy_score(y_true=self.train_y, y_pred=train_pred_y)            
-            print('acc_score_train',acc_score_train)         
+            print('acc_score_train',acc_score_train)   
+            if(self.best_acc < acc_score_test):
+                self.best_acc = acc_score_test      
                
         elif type == 'Regressor':
             mae = np.mean(np.abs(test_pred_y-self.test_y))
@@ -209,6 +216,38 @@ class AI_Filter_Level():
         test_pred_y = self.opt_model.predict(self.test_x)      
         train_pred_y = self.opt_model.predict(self.train_x)     
         
+    def leave_one_out(self,df,type,trainning_type):
+        
+        
+        X = df[['mode', 'pressure', 'rpm']]
+        # X = df[['pressure','rpm']]
+        print('X data',X.head())
+        if type == 'suction':
+            Y = df.suction
+        elif type == 'orifice':    
+            Y = df.orifice
+        elif type == 'level':
+            Y = df.level5
+        
+        # self.train_x, self.train_y 99
+        # self.test_x, self.test_y 1
+        print('lenth of data',len(X))
+        for i in range (0, len(X)):
+            self.test_x = X.loc[[i],:]
+            self.test_x  = self.test_x.head(1)
+            self.test_y = Y.loc[[i]]
+            self.test_y  = self.test_y.head(1)
+            
+            self.train_x = X.drop(X.index[i],axis = 0)
+            self.train_y = Y.drop(Y.index[i],axis = 0)
+        
+            self.Trainning_ensenmble('rf', trainning_type)   
+            self.Testing('ensemble', trainning_type, False)  
+            
+        print('best acc by using leave one out', self.best_acc)
+ 
+        
+        
     def Processing(self):
         trainning_target = 'level' # level, suction
         
@@ -218,19 +257,21 @@ class AI_Filter_Level():
         df_train = self.File_read('train')
         df_test = self.File_read('test')
         
-        # df_data = pd.concat([df_train, df_test], axis=0)
+        df_data = pd.concat([df_train, df_test], axis=0)
         # print(df_data.shape)
         
-        self.train_x, self.train_y = self.Data_set(df_train, trainning_target, 0)
-        self.test_x, self.test_y = self.Data_set(df_test, trainning_target, 0)
+        self.leave_one_out(df_data,trainning_target,trainning_type)
         
-        # self.Trainning_ensenmble('rf', trainning_type) # model : rf, xgb , lgb
-        # self.stacking(trainning_type)
-        # self.Trainning_MLP(trainning_type)        
-        self.Optimal_MLP()              
+        # self.train_x, self.train_y = self.Data_set(df_train, trainning_target, 0)
+        # self.test_x, self.test_y = self.Data_set(df_test, trainning_target, 0)
         
-        # self.Testing('ensemble', trainning_type)  
-        # self.Testing('MLP', trainning_type)               
+        # # self.Trainning_ensenmble('rf', trainning_type) # model : rf, xgb , lgb
+        # # self.stacking(trainning_type)
+        # # self.Trainning_MLP(trainning_type)        
+        # self.Optimal_MLP()              
+        
+        # # self.Testing('ensemble', trainning_type)  
+        # # self.Testing('MLP', trainning_type)               
         
         print('finish')
      
