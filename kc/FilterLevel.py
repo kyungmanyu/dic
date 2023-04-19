@@ -10,13 +10,14 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 # from sklearn.tree import DecisionTreeClassifier # 의사 결정 나무
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, StackingRegressor, StackingClassifier
 from collections import Counter # count
-from sklearn.metrics import f1_score, accuracy_score
+from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 from sklearn.neural_network import MLPRegressor, MLPClassifier
 import xgboost as xgb
 import lightgbm as lgb
 
 """ 시각화 """
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 import warnings
 warnings.simplefilter("ignore", UserWarning)
@@ -43,7 +44,7 @@ test_file = './test_data.csv'
 
 Ensenmble_model = {'rf': [RandomForestClassifier(max_depth=50, n_estimators=50, n_jobs=-1, oob_score=True),\
                           RandomForestRegressor(max_depth=75, n_estimators=50, n_jobs=-1, oob_score=True)], \
-                   'xgb': [xgb.XGBClassifier(max_depth=25, n_estimators=200, learning_rate=0.05,  min_child_weight=3),\
+                   'xgb': [xgb.XGBClassifier(max_depth=25, n_estimators=100, learning_rate=0.05,  min_child_weight=3),\
                        xgb.XGBRegressor(max_depth=50, n_estimators=300, learning_rate=0.1,  min_child_weight=6)],\
                    'lgb': [lgb.LGBMClassifier(learning_rate=0.01, max_depth=25, n_estimators=300, num_leaves=300, objective='multiclass'),\
                    lgb.LGBMRegressor(max_depth=25, n_estimators=300, num_leaves=300, objective='regression')]}
@@ -92,7 +93,7 @@ class AI_Filter_Level():
         # print(X[:5], Y[:5])
         
         if split != 0:  
-            train_x, test_x, train_y, test_y = train_test_split(X, Y, test_size = split, random_state=0)
+            train_x, test_x, train_y, test_y = train_test_split(X, Y, test_size = split)
             return train_x, test_x, train_y, test_y
         else:
             return X, Y            
@@ -155,7 +156,7 @@ class AI_Filter_Level():
         plt.title("Learning Curve of trained MLP Regressor", fontsize=18)
         plt.show()        
         
-    def Testing(self, model, type, view = True):
+    def Testing(self, model, type, view = False):
         if model == 'ensemble':
             test_pred_y = self.opt_model.predict(self.test_x)
             train_pred_y = self.opt_model.predict(self.train_x)
@@ -167,16 +168,18 @@ class AI_Filter_Level():
         if type == 'Classifier':
             acc_score_test =accuracy_score(y_true=self.test_y, y_pred=test_pred_y)
             print('acc_score_test',acc_score_test)
+            acc_score_train =accuracy_score(y_true=self.train_y, y_pred=train_pred_y)
+            print('acc_score_train',acc_score_train)
            
-            print('self.test_y',int(self.test_y))
-            print('test_pred_y',int(test_pred_y[0]))
-            if(int(self.test_y) == int(test_pred_y[0])):
-                self.ans_list.append(1)
-            else:
-                self.ans_list.append(0)
-            self.acc_list.append(acc_score_test)
-            acc_score_train =accuracy_score(y_true=self.train_y, y_pred=train_pred_y)            
-            print('acc_score_train',acc_score_train)   
+            # print('self.test_y',int(self.test_y))
+            # print('test_pred_y',int(test_pred_y[0]))
+            # if(int(self.test_y) == int(test_pred_y[0])):
+            #     self.ans_list.append(1)
+            # else:
+            #     self.ans_list.append(0)
+            # self.acc_list.append(acc_score_test)
+            # acc_score_train =accuracy_score(y_true=self.train_y, y_pred=train_pred_y)            
+            # print('acc_score_train',acc_score_train)   
             
                
         elif type == 'Regressor':
@@ -187,15 +190,26 @@ class AI_Filter_Level():
             # mape = np.mean(np.abs(test_pred_y-self.test_y)/self.test_y)
             # print('mape:',mape)        
         
-        if view == False : return
+        if view == False : return        
+        self.plot_view(self.test_y, test_pred_y, type = 'confusion')        
         
-        plt.figure(figsize = (16,8))
-        ind = np.argsort(np.array(self.test_y))
-        plt.plot(np.array(self.test_y)[ind],label='Real_Value')
-        plt.plot(np.array(test_pred_y)[ind],label='Predict_Value')
-        plt.legend()
-        plt.title('suction power')
-        plt.show()
+    def plot_view(self, true, pred, type = 'plot'):
+        if type == 'plot':
+            plt.figure(figsize = (16,8))
+            ind = np.argsort(np.array(true))
+            plt.plot(np.array(true)[ind],label='Real_Value')
+            plt.plot(np.array(pred)[ind],label='Predict_Value')
+            plt.legend()
+            plt.title('suction power')
+            plt.show()        
+        else :
+            cm_train = confusion_matrix(y_true=true, y_pred=pred)
+            # confusion matrix 시각화
+            plt.figure(figsize=(10, 8))
+            sns.heatmap(data=cm_train, annot=True, fmt='d', annot_kws={'size': 15}, cmap='Blues')
+            plt.xlabel('Predicted', size=20)
+            plt.ylabel('True', size=20)
+            plt.show()    
 
     def Optimal_MLP(self, type = 'Classifier'):        
         for d3 in range(3,30):
@@ -258,8 +272,11 @@ class AI_Filter_Level():
             self.train_x = X.drop(X.index[i],axis = 0)
             self.train_y = Y.drop(Y.index[i],axis = 0)
         # model : rf, xgb , lgb
-            self.Trainning_ensenmble('lgb', trainning_type, withGrid = False)   
-            self.Testing('ensemble', trainning_type, False)  
+            # self.Trainning_ensenmble('lgb', trainning_type, withGrid = False)   
+            # self.stacking(trainning_type)
+            # self.Testing('ensemble', trainning_type, False)  
+            self.Trainning_MLP((5,3,1),trainning_type)         
+            self.Testing('MLP', trainning_type, False)  
             
         print('best acc by using leave one out', max(self.acc_list))
         print('worst acc by using leave one out', min(self.acc_list))
@@ -284,19 +301,19 @@ class AI_Filter_Level():
         df_data = pd.concat([df_train, df_test], axis=0)
         # print(df_data.shape)
         
-        self.leave_one_out(df_data,trainning_target,trainning_type)
+        # self.leave_one_out(df_data,trainning_target,trainning_type)
         
-        # self.train_x, self.test_x, self.train_y, self.test_y = self.Data_set(df_data, trainning_target, 0.3)        
+        self.train_x, self.test_x, self.train_y, self.test_y = self.Data_set(df_data, trainning_target, 0.3)        
         # self.train_x, self.train_y = self.Data_set(df_train, trainning_target, 0)
         # self.test_x, self.test_y = self.Data_set(df_test, trainning_target, 0)
         
-        # self.Trainning_ensenmble('xgb', trainning_type, withGrid = False) # model : rf, xgb , lgb
-        # self.stacking(trainning_type)
-        # self.Trainning_MLP((5,3,1),trainning_type)        
-        # self.Optimal_MLP(trainning_type)              
+        # self.Trainning_ensenmble('rf', trainning_type, withGrid = False) # model : rf, xgb , lgb
+        # self.stacking(trainning_type)       
+        # self.Testing('ensemble', trainning_type, view = True)  
         
-        # self.Testing('ensemble', trainning_type)  
-        # self.Testing('MLP', trainning_type)               
+        # self.Optimal_MLP(trainning_type)
+        self.Trainning_MLP((5,3,1),trainning_type)         
+        self.Testing('MLP', trainning_type, view = True)               
         
         print('finish')
      
